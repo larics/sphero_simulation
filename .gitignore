@@ -1,3 +1,8 @@
+# Ignore all automatically generated world files except definitions.inc
+sphero_stage/resources/worlds/*
+!sphero_stage/resources/worlds/definitions.inc
+
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,pycharm,visualstudiocode,ros
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,pycharm,visualstudiocode,ros
