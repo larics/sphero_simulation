@@ -1,0 +1,15 @@
+map_name: 'empty_10x10'
+num_of_robots: 6
+distribution: 'line'
+
+distribution_list:
+  circle:
+    center_x: 0
+    center_y: 0
+    radius: 1
+
+  line:
+    center_x: -3
+    center_y: 0
+    separation: 1
+    direction: 'vertical'
