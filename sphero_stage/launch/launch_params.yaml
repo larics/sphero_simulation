@@ -1,15 +1,19 @@
-map_name: 'empty_10x10'
-num_of_robots: 6
-distribution: 'line'
+map_name: 'empty_10x10'     # Base name of the map
+num_of_robots: 2            # Number of robots to spawn
+distribution: 'line'        # One of the options from 'distribution_list'
 
 distribution_list:
-  circle:
-    center_x: 0
-    center_y: 0
+  circle:                   # If selected, this option will spawn 'num_of_robots'
+    center_x: 0             # robots evenly distributed in a circle centered in
+    center_y: 0             # 'center_x' and 'center_y' with radius of 'radius'.
     radius: 1
 
   line:
-    center_x: -3
-    center_y: 0
-    separation: 1
-    direction: 'vertical'
+    center_x: 0             # If selected, this option will spawn 'num_of_robots'
+    center_y: 0             # robots evenly distributed in a straight line
+    separation: 1           # centered in 'center_x' and 'center_y' with 
+    direction: 'vertical'   # 'separation' meters between them. You can choose
+                            # between 'vertical' or 'horizontal' direction.
+
+  # other:                  # If you'd like to use an exact formation, you can
+                            # do so by specifying it directly in the .world file.

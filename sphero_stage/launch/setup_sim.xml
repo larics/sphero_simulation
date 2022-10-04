@@ -1,4 +1,5 @@
 <launch>
+    <!-- Default values - you don't have to change this if using start.py. -->
     <arg name="num_of_robots" default="6"/>         <!-- Number of robots used. -->
     <arg name="map_name" default="test_10x10"/>     <!-- Name of the map used. -->
     <arg name="start_rviz" default="false"/>        <!-- Automatically start Rviz. -->
