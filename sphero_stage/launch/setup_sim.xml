@@ -5,7 +5,7 @@
     <arg name="start_rviz" default="false"/>        <!-- Automatically start Rviz. -->
 
     <arg name="map_world" default="$(find sphero_stage)/resources/worlds/$(arg map_name)_$(arg num_of_robots).world"/>
-    <arg name="map_yaml" default="$(find sphero_stage)/resources/maps/$(arg map_name).yaml"/>
+    <arg name="map_yaml" default="$(find sphero_stage)/resources/maps/$(arg map_name)/$(arg map_name).yaml"/>
 
     <!-- Set arguments as ros parameter so all nodes can access them. -->
     <param name="num_of_robots" type="int" value="$(arg num_of_robots)"/>

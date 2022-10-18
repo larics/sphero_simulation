@@ -16,7 +16,7 @@ Stage simulator requires three types of files:
 
 Map files are stored in `resources/maps`. Since a new world file must be created every time the number or position of the robots changes, template world files are used to create actual files at runtime. Templates are stored in `resources/world_templates` and created files in `resources/worlds`.
 
-**Adding new maps and world templates:** Create a bitmap representing the desired map and add corresponding .yaml and .world files using the provided ones as reference.
+**Adding new maps and world templates:** Create a bitmap representing the desired map and add corresponding .yaml and .world files using the provided ones as reference. TODO: There will soon be a script to do most work of creating new maps automatically.
 
 ### Usage
 1. Specify the map name, number of robots and their initial positions distribution within the map in `launch/launch_params.yaml`.
