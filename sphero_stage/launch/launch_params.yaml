@@ -1,6 +1,6 @@
 map_name: 'empty_10x10'     # Base name of the map
-num_of_robots: 2            # Number of robots to spawn
-distribution: 'line'        # One of the options from 'distribution_list'
+num_of_robots: 6          # Number of robots to spawn
+distribution: 'circle'        # One of the options from 'distribution_list'
 
 distribution_list:
   circle:                   # If selected, this option will spawn 'num_of_robots'

@@ -8,6 +8,9 @@ import yaml
 import roslaunch
 import rospy
 import rospkg
+from geometry_msgs.msg import Twist, Point
+from nav_msgs.msg import Odometry, OccupancyGrid
+from std_msgs.msg import Float32, Bool
 
 def distribute_circle(k, n, center_x=0, center_y=0, radius=1):
     x = radius * math.cos(k / n * 2 * math.pi) + center_x
@@ -85,6 +88,7 @@ def main():
 
     print("\033[92mStage simulator launched. Press Ctrl-C to exit when done. \033[0m")
 
+
     # Keep it from exiting.
     try:
         launch.spin()
@@ -98,9 +102,6 @@ if __name__ == '__main__':
     print("\033[36m \nInitialized launcher node. Starting launch process. \033[0m")
 
     main()
-
-
-
 
 
 
