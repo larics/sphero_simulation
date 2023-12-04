@@ -25,22 +25,58 @@ class ReynoldsController:
         self.coh_strength = 1
         self.sep_strength = 1
         self.alig_strength = 0.5
-        self.nav_strength = 3
+        self.nav_strength = 0
+        self.avoid_strength = 7
+        self.avoid_distance = 0.5
         
-        self.nav_point = [-3 , -3]
+        self.nav_point = [-3 , 3]
         
         
         self.fov_max_dist = 2
         
-        self.RulesLib = rr.ReynoldsRules(self.num_of_robots, self.alig_strength, self.coh_strength, self.sep_strength, self.nav_strength, self.nav_point, fov_max_dist = self.fov_max_dist, fov_max_angle = 2 * np.pi) #Class with raynolds rules functions
+        
         
         self.velocities_subscribed = [Twist().linear] * self.num_of_robots
         self.positions_subscribed =  [Pose().position] * self.num_of_robots
         self.rotations_subscribed =  [Pose().orientation] * self.num_of_robots
-         
         self.robot_subsribers = self.create_subscribers_odom()
         self.robot_publishers = self.create_publishers_cmd_vel()
+        self.occupancy_grid_coordinates = []
+        self.map_subscriber = self.create_subsriber_map()
         
+        
+        self.RulesLib = rr.ReynoldsRules(self.num_of_robots, self.alig_strength, self.coh_strength, self.sep_strength, self.nav_strength, self.nav_point, self.avoid_strength, self.avoid_distance, fov_max_dist = self.fov_max_dist, fov_max_angle = 2 * np.pi) #Class with raynolds rules functions
+    
+    def map_to_coordinates(self, occupancy_grid_msg):
+        # Extract map information
+        resolution = occupancy_grid_msg.info.resolution
+        origin = occupancy_grid_msg.info.origin
+        width = occupancy_grid_msg.info.width
+        height = occupancy_grid_msg.info.height
+
+        # Calculate coordinates
+        coordinates = []
+        for y in range(height):
+            for x in range(width):
+                index = y * width + x
+                occupancy_value = occupancy_grid_msg.data[index]
+
+                # Check if the cell is occupied (you can adjust this condition based on your needs)
+                if occupancy_value > 50:
+                    # Calculate real-world coordinates
+                    real_x = origin.position.x + (x + 0.5) * resolution
+                    real_y = origin.position.y + (y + 0.5) * resolution
+
+                    coordinates.append((real_x, real_y))
+
+        return coordinates    
+        
+    def map_callback(self, data):
+        self.occupancy_grid_coordinates = self.map_to_coordinates(data)
+    
+    def create_subsriber_map(self):
+        rospy.Subscriber("/map", OccupancyGrid, self.map_callback)
+    
     def create_subscribers_odom(self):
         for i in range(self.num_of_robots):
             rospy.Subscriber("/robot_{}/odom".format(i), Odometry, self.generate_callback(i))
@@ -73,8 +109,7 @@ class ReynoldsController:
 
     def run(self):
         while not rospy.is_shutdown():
-            
-            #print(self.positions_subscribed)
+
             vel = [Twist()] * self.num_of_robots
 
             
@@ -82,30 +117,16 @@ class ReynoldsController:
             vel_sep = self.RulesLib.separation(self.positions_subscribed)
             vel_alig = self.RulesLib.alignment(self.positions_subscribed, self.rotations_subscribed, self.velocities_subscribed)
             vel_nav = self.RulesLib.navigation(self.positions_subscribed)
-            #print(vel_sep)
-            #print(vel_coh)
-            #print(vel_coh)
+            vel_avoid = self.RulesLib.avoidance(self.positions_subscribed, self.occupancy_grid_coordinates)
+            
             for i in range(self.num_of_robots):
-                #print(type(vel[i]))
-                #print((vel[i]))
-                #print(vel[i])
-                #vel[i] = vel_coh[i]
-                vel[i].linear.x = (vel_coh[i].linear.x - vel_sep[i].linear.x + vel_alig[i].linear.x + vel_nav[i].linear.x )
-                vel[i].linear.y = (vel_coh[i].linear.y - vel_sep[i].linear.y + vel_alig[i].linear.y + vel_nav[i].linear.y )
+                vel[i].linear.x = (vel_coh[i].linear.x - vel_sep[i].linear.x + vel_alig[i].linear.x + vel_nav[i].linear.x - vel_avoid[i].linear.x)
+                vel[i].linear.y = (vel_coh[i].linear.y - vel_sep[i].linear.y + vel_alig[i].linear.y + vel_nav[i].linear.y - vel_avoid[i].linear.y)
                 
                 vel_limited = self.limit_vel(vel)
-                
-                #print(vel[i])
-                #print(vel[i])
-                #print(type(f'pub_{i}'))
-                #print(self.robot_publishers[f'pub_{i}'])
-                
-                
+
                 self.robot_publishers[f'pub_{i}'].publish(vel_limited[i])
-                #print(self.robot_publishers)
-                #self.robot_publishers[f'pub_1'].publish(vel_fake[0])
-                
-            
+
 
 if __name__ == '__main__':
     
