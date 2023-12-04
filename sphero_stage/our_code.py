@@ -19,20 +19,20 @@ class ReynoldsController:
     def __init__(self):
         
         
-        self.num_of_robots = 6
+        self.num_of_robots = 10
         
-        self.vel_max = 1.5
-        self.coh_strength = 1
-        self.sep_strength = 1
+        self.vel_max = 2
+        self.coh_strength = 5
+        self.sep_strength = 1.5
         self.alig_strength = 0.5
-        self.nav_strength = 0
-        self.avoid_strength = 7
-        self.avoid_distance = 0.5
+        self.nav_strength = 0.5
+        self.avoid_strength = 10
+        self.avoid_distance = 1
         
-        self.nav_point = [-3 , 3]
+        self.nav_point = [0 , 5]
         
         
-        self.fov_max_dist = 2
+        self.fov_max_dist = 1.5
         
         
         

@@ -245,8 +245,9 @@ class ReynoldsRules:
             current_robot_position = np.array([positions[i].x, positions[i].y])
             
             closest_object_coordinates, distance_from_closest_object = self.find_closest_object_point_avoidance(current_robot_position, occupancy_grid_coordinates)
-            print(closest_object_coordinates, distance_from_closest_object)
-            if distance_from_closest_object < self.avoid_distance:
+            #print(closest_object_coordinates, distance_from_closest_object)
+            #print(distance_from_closest_object)
+            if distance_from_closest_object < 1000:#self.avoid_distance:
                 current_robot_navigation_force = self.create_avoidance_force(current_robot_position, closest_object_coordinates, distance_from_closest_object)
             
                 avoidance_forces.append(current_robot_navigation_force)
@@ -264,45 +265,25 @@ class ReynoldsRules:
     def find_closest_object_point_avoidance(self, current_robot_position, occupancy_grid_coordinates):
         [x1, y1] = current_robot_position
         min_dist = 100
-        min_point_dist = 1
+        min_point_dist = 0
         for i in occupancy_grid_coordinates:
-            print(i)
+            #print(i)
             [x2, y2] = i
             dist = self.distance(x1, y1, x2, y2)
             if dist < min_dist:
                 min_dist = dist
                 min_point_dist = i
-        
-        return (min_dist, min_point_dist)
+        #print(min_dist)
+        return min_point_dist, min_dist
     
     def create_avoidance_force(self, current_robot_position, closest_object_coordinates, distance_from_closest_object):
-        
-        force = closest_object_coordinates - current_robot_position
-        
-        return force * self.avoid_distance / distance_from_closest_object
-    
-    
-    
-    def create_obstacle_force(self, current_robot_position, obstacle):
-        """
-        Method that creates force in opposite direction. Force is weighted based on distance. A closer robot has more impact on separation force.
-        :param current_robot_position: TIP, position of current robot
-        :param neighbor_robot_position: TIP, position of other robot in the world
-        return: list, weighted force vector
-        """
-        # rospy.logwarn(goal_position)
-        # rospy.logerr(current_robot_position)
-        [x1, y1] = current_robot_position
-        [x2, y2] = obstacle
-
-        # Compute distance current and other robot
-        distance = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-        # print(distance)
-
-        # Create weighted force by substracting position vectors
-        force = current_robot_position - obstacle
-        # force = force / np.linalg.norm(force) / (distance ** 2)
-        force = force / np.linalg.norm(force) / (distance ** 2)
-        # force = -np.array([0 if not (x2-x1) else np.sign(x2-x1)/(x2-x1)**2, 0 if not (y2-y1) else np.sign(y2-y1)/(y2-y1)**2])
-
+        force = 0
+        x = closest_object_coordinates - current_robot_position
+        x_norm = np.linalg.norm(x)
+        field = -10* np.log(x_norm + 2) + 10
+        if field > 0:
+            force = field * x
+        else: force = [0,0]
         return force
+        #return force * self.avoid_distance / distance_from_closest_object
+    
