@@ -1,42 +1,70 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
+"""
+ROS 2 launch file for sphero stage simulation.
+Replicates the functionality of the original ROS 1 start.py script.
+"""
+
 import os
 import sys
 import math
 import yaml
-import roslaunch
-import rospy
-import rospkg
+from pathlib import Path
+
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetLaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+from launch.conditions import IfCondition
+
 
 def distribute_circle(k, n, center_x=0, center_y=0, radius=1):
+    """Distribute robots in a circle formation."""
     x = radius * math.cos(k / n * 2 * math.pi) + center_x
     y = radius * math.sin(k / n * 2 * math.pi) + center_y
     return x, y
 
+
 def distribute_line(k, n, center_x=0, center_y=0, separation=0.5, direction='horizontal'):
+    """Distribute robots in a line formation."""
     if direction == 'horizontal':
-        x = center_x + (k - (n - 1) // 2) * separation
+        x = center_x + (k - (n - 1) / 2) * separation
         y = center_y
     else:
         x = center_x
-        y = center_y + (k - (n - 1) // 2) * separation
+        y = center_y + (k - (n - 1) / 2) * separation
     return x, y
 
-def create_files(resources, config):
+
+def create_world_file(context, *args, **kwargs):
+    """Create world file from template and configuration."""
+    # Get package share directory
+    package_share = FindPackageShare('sphero_stage').perform(context)
+
+    # Load configuration
+    config_path = os.path.join(package_share, 'launch', 'launch_params.yaml')
+    with open(config_path, 'r') as stream:
+        config = yaml.safe_load(stream)
+
     map_name = config['map_name']
     num_of_robots = config['num_of_robots']
     distribution = config['distribution']
     params = config['distribution_list'][distribution]
 
-    template_file = "{}/world_templates/{}.temp".format(resources, map_name)
-    new_map_file  = "{}/worlds/{}_{}.world".format(resources, map_name, num_of_robots)
+    # File paths
+    template_file = os.path.join(package_share, 'config', 'world_templates', f'{map_name}.temp')
+    worlds_dir = os.path.join(package_share, 'config', 'worlds')
+    new_map_file = os.path.join(worlds_dir, f'{map_name}_{num_of_robots}.world')
+
+    # Create worlds directory if it doesn't exist
+    os.makedirs(worlds_dir, exist_ok=True)
 
     if not os.path.isfile(template_file):
-        print("\033[31mUnable to create files - missing template! \033[0m")
-        return False
+        print(f"\033[31mUnable to create files - missing template: {template_file}\033[0m")
+        return []
 
-    proto_line = "sphero( pose [ {x:.3f} {y:.3f} 0 0.000 ] name \"sphero_{k}\" color \"{color}\")\n"
+    proto_line = "robot ( pose [ {x:.3f} {y:.3f} 0 0.000 ] name \"robot_{k}\" color \"{color}\")\n"
 
     with open(new_map_file, 'w') as output, open(template_file, 'r') as temp:
         output.write(temp.read())
@@ -49,61 +77,146 @@ def create_files(resources, config):
             args = {'x': x, 'y': y, 'k': k, 'color': 'blue'}
             output.write(proto_line.format(**args))
 
-    return True
+    print(f"\033[36mCreated world file with {num_of_robots} robots and map '{map_name}'.\033[0m")
+
+    # Set launch configurations for use by other nodes
+    return [
+        SetLaunchConfiguration('num_of_robots', str(num_of_robots)),
+        SetLaunchConfiguration('map_name', map_name),
+        SetLaunchConfiguration('map_world', new_map_file),
+        SetLaunchConfiguration('map_yaml', os.path.join(package_share, 'config', 'maps', map_name, f'{map_name}.yaml'))
+    ]
 
 
-def main():
-    start_rviz = 'true' if '--rviz' in sys.argv else 'false'
+def launch_setup(context, *args, **kwargs):
+    """Setup launch configuration and return nodes."""
 
-    # Set up launch variables. These are hard-coded and they shouldn't be changed.
-    package = rospkg.RosPack().get_path('sphero_stage')
-    resources = package + '/resources'
-    with open(package + '/launch/launch_params.yaml', 'r') as stream:
-        config = yaml.full_load(stream)
-    num_of_robots = config['num_of_robots']
-    map_name = config['map_name']
-    cli_args = [package + '/launch/setup_sim.xml',
-                'num_of_robots:=' + str(num_of_robots),
-                'map_name:=' + map_name,
-                'start_rviz:=' + start_rviz]
+    # Get launch configurations
+    num_of_robots = LaunchConfiguration('num_of_robots')
+    map_name = LaunchConfiguration('map_name')
+    map_world = LaunchConfiguration('map_world')
+    map_yaml = LaunchConfiguration('map_yaml')
+    start_rviz = LaunchConfiguration('start_rviz')
 
-    # Create a world file from template using the same name and specified number of robots.
-    print("\033[36m \nCreating world file with {} robots and map '{}'.\033[0m".format(num_of_robots, map_name))
-    if not create_files(resources, config):
-        return
+    # Package paths
+    sphero_stage_share = FindPackageShare('sphero_stage')
+    sphero_description_share = FindPackageShare('sphero_description')
 
-    print("\033[36mCalling the setup launch file. \033[0m")
-    # Prepare for launching.
-    uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-    roslaunch.configure_logging(uuid)
-    roslaunch_args = cli_args[1:]
-    roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
+    nodes = []
 
-    # Launch!
-    launch = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)
-    launch.start()
+    # Map server node (ROS 2 equivalent)
+    nodes.append(
+        Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='map_server',
+            parameters=[{
+                'yaml_filename': map_yaml,
+                'use_sim_time': True
+            }],
+            output='screen'
+        )
+    )
 
-    print("\033[92mStage simulator launched. Press Ctrl-C to exit when done. \033[0m")
+    # Map server lifecycle manager
+    nodes.append(
+        Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager_map_server',
+            parameters=[{
+                'node_names': ['map_server'],
+                'use_sim_time': True,
+                'autostart': True
+            }],
+            output='screen'
+        )
+    )
 
-    # Keep it from exiting.
-    try:
-        launch.spin()
-    finally:
-        # After Ctrl+C, stop all nodes from running.
-        launch.shutdown()
+    # Stage simulator node
+    nodes.append(
+        Node(
+            package='stage_ros2',
+            executable='stage_ros2',
+            name='simulator',
+            parameters=[
+                {'world_file': map_world},
+                {'enforce_prefixes': False},
+                {'one_tf_tree': True},
+            ],
+            output='screen'
+        )
+    )
 
-if __name__ == '__main__':
-    rospy.init_node('stage_launcher', anonymous=True)
+    # Static TF broadcasters for all robots
+    num_robots_int = int(context.launch_configurations['num_of_robots'])
+    for i in range(num_robots_int):
+        nodes.append(
+            Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name=f'static_tf_publisher_robot_{i}',
+                arguments=[
+                    '--x', '0', '--y', '0', '--z', '0',
+                    '--yaw', '0', '--pitch', '0', '--roll', '0',
+                    '--frame-id', 'map', '--child-frame-id', f'robot_{i}/odom']
+            )
+        )
 
-    print("\033[36m \nInitialized launcher node. Starting launch process. \033[0m")
+    # Robot state publisher (for URDF)
+    # We'll use Command to read the URDF file content
+    urdf_file_path = PathJoinSubstitution([sphero_description_share, 'urdf', 'simple_ball.urdf'])
+    robot_description = Command(['cat ', urdf_file_path])
 
-    main()
+    nodes.append(
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            parameters=[{
+                'robot_description': robot_description,
+                'use_sim_time': True
+            }],
+            condition=IfCondition(start_rviz),
+            output='screen'
+        )
+    )
+
+    # RViz node
+    rviz_config = PathJoinSubstitution([sphero_stage_share, 'launch', 'sphero_sim.rviz'])
+
+    nodes.append(
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            # arguments=['-d', rviz_config],
+            parameters=[{'use_sim_time': True}],
+            condition=IfCondition(start_rviz),
+            output='screen'
+        )
+    )
+
+    return nodes
 
 
+def generate_launch_description():
+    """Generate the launch description."""
 
+    # Check for --rviz argument
+    start_rviz_default = 'true' if '--rviz' in sys.argv else 'false'
 
+    return LaunchDescription([
+        # Launch arguments
+        DeclareLaunchArgument(
+            'start_rviz',
+            default_value=start_rviz_default,
+            description='Whether to start RViz'
+        ),
 
+        # Create world file and set configurations
+        OpaqueFunction(function=create_world_file),
 
-
-
-
+        # Launch nodes
+        OpaqueFunction(function=launch_setup)
+    ])
