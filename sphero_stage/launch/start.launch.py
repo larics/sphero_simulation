@@ -9,7 +9,6 @@ import os
 import sys
 import math
 import yaml
-from pathlib import Path
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, SetLaunchConfiguration
@@ -92,8 +91,6 @@ def launch_setup(context, *args, **kwargs):
     """Setup launch configuration and return nodes."""
 
     # Get launch configurations
-    num_of_robots = LaunchConfiguration('num_of_robots')
-    map_name = LaunchConfiguration('map_name')
     map_world = LaunchConfiguration('map_world')
     map_yaml = LaunchConfiguration('map_yaml')
     start_rviz = LaunchConfiguration('start_rviz')
@@ -190,7 +187,7 @@ def launch_setup(context, *args, **kwargs):
             package='rviz2',
             executable='rviz2',
             name='rviz2',
-            # arguments=['-d', rviz_config],
+            arguments=['-d', rviz_config],
             parameters=[{'use_sim_time': True}],
             condition=IfCondition(start_rviz),
             output='screen'

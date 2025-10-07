@@ -19,8 +19,17 @@ define robot position
 	update_interval  10 # update timestep in milliseconds
 
 	# [ xmin xmax ymin ymax zmin zmax amin amax ]
-	velocity_bounds [-10 10 -10 10 -1 1 -90 90 ]
-	acceleration_bounds [-10 10 -10 10 -1 1 -90 90]
+	velocity_bounds [-1 1 -1 1 -1 1 -90 90 ]
+	acceleration_bounds [-0.01 0.01 -0.01 0.01 -1 1 -90 90]
+	# Acceleration bounds are only applied when using acceleration commands.
+	# stage_ros2 does not currently expose this functionality. To add it, one
+	# should add a function like
+	#
+	# ```void StageNode::Vehicle::callback_cmd(const geometry_msgs::msg::Twist::SharedPtr msg)```
+	#
+	# at the end of this file https://github.com/tuw-robotics/stage_ros2/blob/jazzy/src/vehicle.cpp
+	# and then use `SetAcceleration` instead of `SetVelocity` in the body of
+	# that function, following https://github.com/rtv/Stage/blob/281ed731ed56b23d0879a2c765d4a20824a6d58a/libstage/model_position.cc#L652
 )
 
 define floorplan model
