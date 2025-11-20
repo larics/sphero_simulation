@@ -21,6 +21,9 @@ Map files are stored in `config/maps`. Since a new world file must be created ev
 ### Usage
 1. Specify the map name, number of robots and their initial positions distribution within the map in `launch/launch_params.yaml`.
 2. Run the `launch/start.launch.py` launch file. It will load the launch parameters, create the final world file and launch the simulator, map server, and the node for simulated TF.
+3. Stage keymaps:
+    1. Press "o" to enable/disable trails (history of movement). More options are available in the View menu.
+    2. Press "p" to pause the simulation. More options are available in the Run menu.
 
 ### Step-by-step example
 1. Leave all the values at their default settings.
